@@ -29,9 +29,9 @@ func DefaultJournalPath() (string, error) {
 
 // JournalRepository stores journal entries in a JSON file.
 type JournalRepository struct {
-	mu     sync.RWMutex
-	path   string
-	byDate map[string]journal.Entry
+	mu      sync.RWMutex
+	path    string
+	entries []journal.Entry
 }
 
 func NewJournalRepository(path string) (*JournalRepository, error) {
@@ -45,8 +45,8 @@ func NewJournalRepository(path string) (*JournalRepository, error) {
 	}
 
 	repo := &JournalRepository{
-		path:   path,
-		byDate: make(map[string]journal.Entry),
+		path:    path,
+		entries: []journal.Entry{},
 	}
 	if err := repo.load(); err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (r *JournalRepository) Save(_ context.Context, entry journal.Entry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.byDate[dateKey(entry.Date)] = entry
+	r.entries = append(r.entries, entry)
 	return r.persistLocked()
 }
 
@@ -66,12 +66,19 @@ func (r *JournalRepository) Latest(_ context.Context) (*journal.Entry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if len(r.byDate) == 0 {
+	if len(r.entries) == 0 {
 		return nil, journal.ErrNotFound
 	}
 
-	keys := sortedKeys(r.byDate)
-	latest := r.byDate[keys[len(keys)-1]]
+	latestIndex := 0
+	for i := 1; i < len(r.entries); i++ {
+		current := r.entries[i].Date
+		latest := r.entries[latestIndex].Date
+		if current.After(latest) || current.Equal(latest) {
+			latestIndex = i
+		}
+	}
+	latest := r.entries[latestIndex]
 	copy := latest
 	return &copy, nil
 }
@@ -80,15 +87,14 @@ func (r *JournalRepository) List(_ context.Context) ([]journal.Entry, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if len(r.byDate) == 0 {
+	if len(r.entries) == 0 {
 		return nil, nil
 	}
 
-	keys := sortedKeys(r.byDate)
-	entries := make([]journal.Entry, 0, len(keys))
-	for _, key := range keys {
-		entries = append(entries, r.byDate[key])
-	}
+	entries := append([]journal.Entry{}, r.entries...)
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Date.Before(entries[j].Date)
+	})
 	return entries, nil
 }
 
@@ -114,16 +120,19 @@ func (r *JournalRepository) load() error {
 		if err != nil {
 			return err
 		}
-		r.byDate[dateKey(entry.Date)] = entry
+		r.entries = append(r.entries, entry)
 	}
 	return nil
 }
 
 func (r *JournalRepository) persistLocked() error {
-	keys := sortedKeys(r.byDate)
-	records := make([]entryRecord, 0, len(keys))
-	for _, key := range keys {
-		records = append(records, recordFromEntry(r.byDate[key]))
+	entries := append([]journal.Entry{}, r.entries...)
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Date.Before(entries[j].Date)
+	})
+	records := make([]entryRecord, 0, len(entries))
+	for _, entry := range entries {
+		records = append(records, recordFromEntry(entry))
 	}
 
 	data, err := json.MarshalIndent(records, "", "  ")
@@ -170,19 +179,6 @@ func (r entryRecord) toEntry() (journal.Entry, error) {
 		return journal.Entry{}, fmt.Errorf("invalid journal entry for %s: %w", r.Date, err)
 	}
 	return entry, nil
-}
-
-func sortedKeys(entries map[string]journal.Entry) []string {
-	keys := make([]string, 0, len(entries))
-	for key := range entries {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func dateKey(date time.Time) string {
-	return date.UTC().Format("2006-01-02")
 }
 
 func writeFileAtomic(path string, data []byte, perm os.FileMode) error {

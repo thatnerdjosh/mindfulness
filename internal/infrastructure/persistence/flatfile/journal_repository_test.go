@@ -85,6 +85,60 @@ func TestJournalRepositoryLatest(t *testing.T) {
 	}
 }
 
+func TestJournalRepositoryMultipleEntriesSameDate(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "journal.json")
+
+	repo, err := NewJournalRepository(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	entryOne, err := journal.NewEntry(time.Date(2024, 2, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
+		journal.TrueLove: "kindness",
+	}, "first", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	entryTwo, err := journal.NewEntry(time.Date(2024, 2, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
+		journal.TrueHappiness: "share",
+	}, "second", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err := repo.Save(context.Background(), entryOne); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := repo.Save(context.Background(), entryTwo); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	repoReloaded, err := NewJournalRepository(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	latest, err := repoReloaded.Latest(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if latest.Note != "second" {
+		t.Fatalf("expected latest entry to be most recent, got %q", latest.Note)
+	}
+
+	list, err := repoReloaded.List(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(list))
+	}
+	if list[0].Note != "first" || list[1].Note != "second" {
+		t.Fatalf("expected entries in save order, got %q then %q", list[0].Note, list[1].Note)
+	}
+}
+
 func TestJournalRepositoryLatestEmpty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "journal.json")
