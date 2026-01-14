@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	adherenceapp "mindfulness/internal/application/adherence"
 	journalapp "mindfulness/internal/application/journal"
 	"mindfulness/internal/domain/journal"
 	"mindfulness/internal/infrastructure/persistence/memory"
@@ -500,5 +501,83 @@ func TestPromptReadError(t *testing.T) {
 	_, err := prompt(reader, &bytes.Buffer{}, "prompt: ")
 	if err == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func TestRunAdherenceRequiresSubcommand(t *testing.T) {
+	repo := memory.NewAdherenceRepository()
+	svc := adherenceapp.NewService(repo)
+	var errOut bytes.Buffer
+
+	if err := runAdherence([]string{}, svc, strings.NewReader(""), &bytes.Buffer{}, &errOut); err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(errOut.String(), "Usage:") {
+		t.Fatalf("expected usage output")
+	}
+}
+
+func TestRunAdherenceGuidedNoConfirm(t *testing.T) {
+	repo := memory.NewAdherenceRepository()
+	svc := adherenceapp.NewService(repo)
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+
+	input := strings.NewReader(strings.Join([]string{
+		"y",
+		"n",
+		"note for happiness",
+		"",
+		"",
+		"",
+	}, "\n"))
+
+	err := runAdherenceGuided([]string{"--no-confirm"}, svc, input, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "adherence updated") {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+
+	state, err := svc.Current(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if state[journal.TrueHappiness] {
+		t.Fatalf("expected TrueHappiness false")
+	}
+}
+
+func TestRunAdherenceGuidedConfirmNo(t *testing.T) {
+	repo := memory.NewAdherenceRepository()
+	svc := adherenceapp.NewService(repo)
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+
+	input := strings.NewReader(strings.Join([]string{
+		"n",
+		"note for reverence",
+		"",
+		"",
+		"",
+		"",
+		"n",
+	}, "\n"))
+
+	err := runAdherenceGuided([]string{}, svc, input, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), "not saved") {
+		t.Fatalf("expected cancellation output, got %s", out.String())
+	}
+
+	state, err := svc.Current(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !state[journal.ReverenceForLife] {
+		t.Fatalf("expected ReverenceForLife to remain true")
 	}
 }

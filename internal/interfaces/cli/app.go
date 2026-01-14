@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	adherenceapp "mindfulness/internal/application/adherence"
 	journalapp "mindfulness/internal/application/journal"
 	"mindfulness/internal/domain/journal"
 	"mindfulness/internal/infrastructure/persistence/flatfile"
@@ -34,12 +35,28 @@ func Run(args []string, out io.Writer, errOut io.Writer) error {
 	}
 	svc := journalapp.NewService(repo)
 
+	adherencePath, err := flatfile.DefaultAdherencePath()
+	if err != nil {
+		return err
+	}
+	adherenceLogPath, err := flatfile.DefaultAdherenceLogPath()
+	if err != nil {
+		return err
+	}
+	adherenceRepo, err := flatfile.NewAdherenceRepository(adherencePath, adherenceLogPath)
+	if err != nil {
+		return err
+	}
+	adherenceSvc := adherenceapp.NewService(adherenceRepo)
+
 	switch args[1] {
 	case "version", "-v", "--version":
 		fmt.Fprintln(out, "mt", version)
 		return nil
 	case "journal":
 		return runJournal(args[2:], svc, os.Stdin, out, errOut)
+	case "adherence":
+		return runAdherence(args[2:], adherenceSvc, os.Stdin, out, errOut)
 	case "help", "-h", "--help":
 		printUsage(out)
 		return nil
@@ -47,6 +64,25 @@ func Run(args []string, out io.Writer, errOut io.Writer) error {
 		fmt.Fprintf(errOut, "unknown command: %s\n", args[1])
 		printUsage(errOut)
 		return fmt.Errorf("unknown command: %s", args[1])
+	}
+}
+
+func runAdherence(args []string, svc *adherenceapp.Service, in io.Reader, out io.Writer, errOut io.Writer) error {
+	if len(args) < 1 {
+		printAdherenceUsage(errOut)
+		return fmt.Errorf("adherence subcommand required")
+	}
+
+	switch args[0] {
+	case "guided":
+		return runAdherenceGuided(args[1:], svc, in, out, errOut)
+	case "help", "-h", "--help":
+		printAdherenceUsage(out)
+		return nil
+	default:
+		fmt.Fprintf(errOut, "unknown adherence command: %s\n", args[0])
+		printAdherenceUsage(errOut)
+		return fmt.Errorf("unknown adherence command: %s", args[0])
 	}
 }
 
@@ -204,6 +240,72 @@ func runJournalList(svc *journalapp.Service, out io.Writer) error {
 	return nil
 }
 
+func runAdherenceGuided(args []string, svc *adherenceapp.Service, in io.Reader, out io.Writer, errOut io.Writer) error {
+	fs := flag.NewFlagSet("adherence guided", flag.ContinueOnError)
+	fs.SetOutput(errOut)
+	noConfirm := fs.Bool("no-confirm", false, "save without confirmation")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	current, err := svc.Current(context.Background())
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(in)
+	next := make(journal.Adherence, len(current))
+	notes := make(map[journal.Precept]string)
+
+	for _, info := range journal.AllPrecepts() {
+		currentValue := current[info.ID]
+		question := fmt.Sprintf("%s (currently %s) keep? (y/n, default %s): ",
+			info.Title,
+			yesNoLabel(currentValue),
+			yesNoLabel(currentValue),
+		)
+		answer, err := prompt(reader, out, question)
+		if err != nil {
+			return err
+		}
+		value, err := parseYesNoDefault(answer, currentValue)
+		if err != nil {
+			return err
+		}
+		next[info.ID] = value
+
+		if value != currentValue {
+			note, err := prompt(reader, out, fmt.Sprintf("Note for %s (optional): ", info.Title))
+			if err != nil {
+				return err
+			}
+			note = strings.TrimSpace(note)
+			if note != "" {
+				notes[info.ID] = note
+			}
+		}
+	}
+
+	if !*noConfirm {
+		printAdherenceSummary(out, current, next, notes)
+		confirm, err := prompt(reader, out, "Save? (y/n): ")
+		if err != nil {
+			return err
+		}
+		if !isYes(confirm) {
+			fmt.Fprintln(out, "not saved")
+			return nil
+		}
+	}
+
+	if err := svc.Set(context.Background(), next, notes); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(out, "adherence updated")
+	return nil
+}
+
 func prompt(reader *bufio.Reader, out io.Writer, label string) (string, error) {
 	fmt.Fprint(out, label)
 	line, err := reader.ReadString('\n')
@@ -229,6 +331,21 @@ func printGuidedSummary(out io.Writer, date time.Time, mood string, note string,
 	}
 }
 
+func printAdherenceSummary(out io.Writer, current journal.Adherence, next journal.Adherence, notes map[journal.Precept]string) {
+	fmt.Fprintln(out, "Summary:")
+	for _, info := range journal.AllPrecepts() {
+		before := current[info.ID]
+		after := next[info.ID]
+		if before == after {
+			continue
+		}
+		fmt.Fprintf(out, "%s: %s -> %s\n", info.Title, yesNoLabel(before), yesNoLabel(after))
+		if note, ok := notes[info.ID]; ok && strings.TrimSpace(note) != "" {
+			fmt.Fprintf(out, "Note: %s\n", strings.TrimSpace(note))
+		}
+	}
+}
+
 func isYes(input string) bool {
 	switch strings.ToLower(strings.TrimSpace(input)) {
 	case "y", "yes":
@@ -236,6 +353,26 @@ func isYes(input string) bool {
 	default:
 		return false
 	}
+}
+
+func parseYesNoDefault(input string, defaultValue bool) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(input)) {
+	case "":
+		return defaultValue, nil
+	case "y", "yes":
+		return true, nil
+	case "n", "no":
+		return false, nil
+	default:
+		return false, fmt.Errorf("enter y or n")
+	}
+}
+
+func yesNoLabel(value bool) string {
+	if value {
+		return "yes"
+	}
+	return "no"
 }
 
 func parseDate(input string) (time.Time, error) {
@@ -260,6 +397,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  mt journal guided")
 	fmt.Fprintln(out, "  mt journal latest")
 	fmt.Fprintln(out, "  mt journal list")
+	fmt.Fprintln(out, "  mt adherence guided")
 	fmt.Fprintln(out, "  mt version")
 }
 
@@ -270,4 +408,9 @@ func printJournalUsage(out io.Writer) {
 	fmt.Fprintln(out, "  mt journal guided")
 	fmt.Fprintln(out, "  mt journal latest")
 	fmt.Fprintln(out, "  mt journal list")
+}
+
+func printAdherenceUsage(out io.Writer) {
+	fmt.Fprintln(out, "Usage:")
+	fmt.Fprintln(out, "  mt adherence guided")
 }
