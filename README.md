@@ -2,6 +2,15 @@
 
 CLI journal for daily reflections on the Five Mindfulness Trainings.
 
+## Usage
+
+```bash
+git clone https://github.com/thatnerdjosh/mindfulness.git
+cd mindfulness
+go install ./...
+PATH="$HOME/go/bin:$PATH" mt
+```
+
 ## Design
 
 * [X] - Multiple entries (format below) per-day, stored in `$XDG_DATA_DIR/mt/journal.json`
