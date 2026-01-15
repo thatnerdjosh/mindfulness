@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Source: https://github.com/thatnerdjosh/mindfulness
+Upstream-Name: mindfulness
+Upstream-Contact: TODO
+
+Files: *
+Copyright: 2026 Khun Josh
+License: TODO
+
+Files: debian/*
+Copyright: 2026 Khun Josh <thatnerdjosh@envs.net>
+License: TODO
+Comment: Debian packaging is licensed under the same terms as upstream
+
+License: TODO
+ TODO

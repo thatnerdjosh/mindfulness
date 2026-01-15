@@ -1,0 +1,62 @@
+Source: golang-github-thatnerdjosh-mindfulness
+Section: golang
+Priority: optional
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders: Khun Josh <thatnerdjosh@envs.net>,
+Build-Depends: debhelper-compat (= 13),
+               dh-sequence-golang,
+               golang-any,
+Testsuite: autopkgtest-pkg-go
+Standards-Version: 4.7.0
+Vcs-Browser: https://salsa.debian.org/go-team/packages/golang-github-thatnerdjosh-mindfulness
+Vcs-Git: https://salsa.debian.org/go-team/packages/golang-github-thatnerdjosh-mindfulness.git
+Homepage: https://github.com/thatnerdjosh/mindfulness
+XS-Go-Import-Path: github.com/thatnerdjosh/mindfulness
+
+Package: golang-github-thatnerdjosh-mindfulness-dev
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends},
+Description:  (library)
+ Mindfulness (mt)
+ .
+ CLI journal for daily reflections on the Five Mindfulness Trainings.
+ .
+ Usage
+ .
+   git clone https://github.com/thatnerdjosh/mindfulness.git
+   cd mindfulness
+   go install ./...
+   PATH="$HOME/go/bin:$PATH" mt
+ .
+ Design
+ .
+  [x] - Multiple entries (format below) per-day, stored in
+  $XDG_DATA_DIR/mt/journal.json
+ .
+   [
+   	{
+   		"date": "YYYY-MM-DD",
+   		"reflections": {
+   			"1st precept": "",
+   			...
+   		}
+   	}
+   	...
+   ]
+ .
+  [x] - Ability to keep track of precept adherence, stored in
+  $XDG_DATA_DIR/mt/adherence.json - adherence to precepts defaults to
+ true
+ .
+   {
+   	"1st precept": true,
+   	...
+   }
+ .
+  [x] - Log file when adherence is modified (true <-> false)
+  [x] - Guided adherence toggle interface (defaults will be based on the
+  current adherence)
+  [x] - Optional journal note when any of the adherences are toggled
+  (specifically for the precept which is toggled)
+
