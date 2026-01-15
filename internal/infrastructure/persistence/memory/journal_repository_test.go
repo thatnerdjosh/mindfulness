@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 func TestJournalRepositoryLatestAndList(t *testing.T) {

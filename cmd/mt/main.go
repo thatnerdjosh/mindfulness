@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"mindfulness/internal/interfaces/cli"
+	"github.com/thatnerdjosh/mindfulness/internal/interfaces/cli"
 )
 
 var exit = os.Exit

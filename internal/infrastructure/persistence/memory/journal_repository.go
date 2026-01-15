@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // JournalRepository is an in-memory implementation for journal entries.

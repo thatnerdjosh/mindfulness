@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // DefaultAdherencePath returns the default JSON adherence file path.

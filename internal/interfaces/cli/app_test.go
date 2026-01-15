@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	adherenceapp "mindfulness/internal/application/adherence"
-	journalapp "mindfulness/internal/application/journal"
-	"mindfulness/internal/domain/journal"
-	"mindfulness/internal/infrastructure/persistence/memory"
+	adherenceapp "github.com/thatnerdjosh/mindfulness/internal/application/adherence"
+	journalapp "github.com/thatnerdjosh/mindfulness/internal/application/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/infrastructure/persistence/memory"
 )
 
 func TestRunJournalAddAndLatest(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 func TestAdherenceRepositoryDefaults(t *testing.T) {

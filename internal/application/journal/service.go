@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // Service coordinates journaling use cases.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // AdherenceRepository is an in-memory implementation for adherence state and logs.

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // DefaultJournalPath returns the default JSON journal file path.
