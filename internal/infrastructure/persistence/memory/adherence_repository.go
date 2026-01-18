@@ -4,47 +4,47 @@ import (
 	"context"
 	"sync"
 
-	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
+	"github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 )
 
 // AdherenceRepository is an in-memory implementation for adherence state and logs.
 type AdherenceRepository struct {
 	mu        sync.RWMutex
-	adherence journal.Adherence
-	logs      []journal.AdherenceLogEntry
+	adherence adherence.Adherence
+	logs      []adherence.AdherenceLogEntry
 }
 
 func NewAdherenceRepository() *AdherenceRepository {
 	return &AdherenceRepository{
-		adherence: journal.DefaultAdherence(),
-		logs:      []journal.AdherenceLogEntry{},
+		adherence: adherence.DefaultAdherence(),
+		logs:      []adherence.AdherenceLogEntry{},
 	}
 }
 
-func (r *AdherenceRepository) Get(_ context.Context) (journal.Adherence, error) {
+func (r *AdherenceRepository) Get(_ context.Context) (adherence.Adherence, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	copy := make(journal.Adherence, len(r.adherence))
+	copy := make(adherence.Adherence, len(r.adherence))
 	for precept, value := range r.adherence {
 		copy[precept] = value
 	}
 	return copy, nil
 }
 
-func (r *AdherenceRepository) Save(_ context.Context, adherence journal.Adherence) error {
+func (r *AdherenceRepository) Save(_ context.Context, state adherence.Adherence) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	copy := make(journal.Adherence, len(adherence))
-	for precept, value := range adherence {
+	copy := make(adherence.Adherence, len(state))
+	for precept, value := range state {
 		copy[precept] = value
 	}
 	r.adherence = copy
 	return nil
 }
 
-func (r *AdherenceRepository) AppendLog(_ context.Context, entry journal.AdherenceLogEntry) error {
+func (r *AdherenceRepository) AppendLog(_ context.Context, entry adherence.AdherenceLogEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
@@ -22,7 +23,7 @@ func TestAdherenceRepositoryDefaults(t *testing.T) {
 
 func TestAdherenceRepositorySave(t *testing.T) {
 	repo := NewAdherenceRepository()
-	state := journal.DefaultAdherence()
+	state := adherence.DefaultAdherence()
 	state[journal.TrueHappiness] = false
 	if err := repo.Save(context.Background(), state); err != nil {
 		t.Fatalf("unexpected error: %v", err)

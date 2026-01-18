@@ -6,33 +6,34 @@ import (
 	"strings"
 	"time"
 
+	"github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
 // Service coordinates adherence use cases.
 type Service struct {
-	repo journal.AdherenceRepository
+	repo adherence.Repository
 	now  func() time.Time
 }
 
-func NewService(repo journal.AdherenceRepository) *Service {
+func NewService(repo adherence.Repository) *Service {
 	return &Service{
 		repo: repo,
 		now:  time.Now,
 	}
 }
 
-func (s *Service) Current(ctx context.Context) (journal.Adherence, error) {
+func (s *Service) Current(ctx context.Context) (adherence.Adherence, error) {
 	return s.repo.Get(ctx)
 }
 
-func (s *Service) Set(ctx context.Context, next journal.Adherence, notes map[journal.Precept]string) error {
+func (s *Service) Set(ctx context.Context, next adherence.Adherence, notes map[journal.Precept]string) error {
 	current, err := s.repo.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	updated := make(journal.Adherence, len(current))
+	updated := make(adherence.Adherence, len(current))
 	for precept, value := range current {
 		updated[precept] = value
 	}
@@ -55,7 +56,7 @@ func (s *Service) Set(ctx context.Context, next journal.Adherence, notes map[jou
 			continue
 		}
 		note := strings.TrimSpace(notes[precept])
-		entry := journal.AdherenceLogEntry{
+		entry := adherence.AdherenceLogEntry{
 			At:      now,
 			Precept: precept,
 			From:    from,

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
@@ -42,7 +43,7 @@ func TestAdherenceRepositoryPersists(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	state := journal.DefaultAdherence()
+	state := adherence.DefaultAdherence()
 	state[journal.TrueLove] = false
 	if err := repo.Save(context.Background(), state); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -72,7 +73,7 @@ func TestAdherenceRepositoryAppendLog(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	entry := journal.AdherenceLogEntry{
+	entry := adherence.AdherenceLogEntry{
 		At:      time.Date(2024, 2, 10, 12, 0, 0, 0, time.UTC),
 		Precept: journal.TrueLove,
 		From:    true,

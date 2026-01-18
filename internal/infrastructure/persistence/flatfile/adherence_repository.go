@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 )
 
@@ -44,7 +45,7 @@ type AdherenceRepository struct {
 	mu      sync.RWMutex
 	path    string
 	logPath string
-	state   journal.Adherence
+	state   adherence.Adherence
 }
 
 func NewAdherenceRepository(path string, logPath string) (*AdherenceRepository, error) {
@@ -67,7 +68,7 @@ func NewAdherenceRepository(path string, logPath string) (*AdherenceRepository, 
 	repo := &AdherenceRepository{
 		path:    path,
 		logPath: logPath,
-		state:   journal.DefaultAdherence(),
+		state:   adherence.DefaultAdherence(),
 	}
 	if err := repo.load(); err != nil {
 		return nil, err
@@ -75,30 +76,30 @@ func NewAdherenceRepository(path string, logPath string) (*AdherenceRepository, 
 	return repo, nil
 }
 
-func (r *AdherenceRepository) Get(_ context.Context) (journal.Adherence, error) {
+func (r *AdherenceRepository) Get(_ context.Context) (adherence.Adherence, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	copy := make(journal.Adherence, len(r.state))
+	copy := make(adherence.Adherence, len(r.state))
 	for precept, value := range r.state {
 		copy[precept] = value
 	}
 	return copy, nil
 }
 
-func (r *AdherenceRepository) Save(_ context.Context, adherence journal.Adherence) error {
+func (r *AdherenceRepository) Save(_ context.Context, state adherence.Adherence) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	copy := make(journal.Adherence, len(adherence))
-	for precept, value := range adherence {
+	copy := make(adherence.Adherence, len(state))
+	for precept, value := range state {
 		copy[precept] = value
 	}
 	r.state = copy
 	return r.persistLocked()
 }
 
-func (r *AdherenceRepository) AppendLog(_ context.Context, entry journal.AdherenceLogEntry) error {
+func (r *AdherenceRepository) AppendLog(_ context.Context, entry adherence.AdherenceLogEntry) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -155,7 +156,7 @@ func (r *AdherenceRepository) persistLocked() error {
 
 type adherenceRecord map[string]bool
 
-func recordFromAdherence(adherence journal.Adherence) adherenceRecord {
+func recordFromAdherence(adherence adherence.Adherence) adherenceRecord {
 	precepts := make(map[string]bool, len(adherence))
 	for precept, value := range adherence {
 		precepts[string(precept)] = value
@@ -163,8 +164,8 @@ func recordFromAdherence(adherence journal.Adherence) adherenceRecord {
 	return adherenceRecord(precepts)
 }
 
-func (r adherenceRecord) toAdherence() (journal.Adherence, error) {
-	state := journal.DefaultAdherence()
+func (r adherenceRecord) toAdherence() (adherence.Adherence, error) {
+	state := adherence.DefaultAdherence()
 	for precept, value := range r {
 		if !journal.IsKnownPrecept(journal.Precept(precept)) {
 			return nil, fmt.Errorf("unknown precept in adherence file: %s", precept)

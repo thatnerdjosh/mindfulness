@@ -13,6 +13,7 @@ import (
 
 	adherenceapp "github.com/thatnerdjosh/mindfulness/internal/application/adherence"
 	journalapp "github.com/thatnerdjosh/mindfulness/internal/application/journal"
+	adherencedomain "github.com/thatnerdjosh/mindfulness/internal/domain/adherence"
 	"github.com/thatnerdjosh/mindfulness/internal/domain/journal"
 	"github.com/thatnerdjosh/mindfulness/internal/infrastructure/persistence/flatfile"
 )
@@ -283,7 +284,7 @@ func runAdherenceGuided(args []string, svc *adherenceapp.Service, in io.Reader, 
 	}
 
 	reader := bufio.NewReader(in)
-	next := make(journal.Adherence, len(current))
+	next := make(adherencedomain.Adherence, len(current))
 	notes := make(map[journal.Precept]string)
 
 	for _, info := range journal.AllPrecepts() {
@@ -360,7 +361,7 @@ func printGuidedSummary(out io.Writer, date time.Time, mood string, note string,
 	}
 }
 
-func printAdherenceSummary(out io.Writer, current journal.Adherence, next journal.Adherence, notes map[journal.Precept]string) {
+func printAdherenceSummary(out io.Writer, current adherencedomain.Adherence, next adherencedomain.Adherence, notes map[journal.Precept]string) {
 	fmt.Fprintln(out, "Summary:")
 	for _, info := range journal.AllPrecepts() {
 		before := current[info.ID]
