@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -55,6 +56,8 @@ func Run(args []string, out io.Writer, errOut io.Writer) error {
 		return nil
 	case "journal":
 		return runJournal(args[2:], svc, os.Stdin, out, errOut)
+	case "quicknote":
+		return runQuicknote(args[2:], svc, os.Stdin, out, errOut)
 	case "adherence":
 		return runAdherence(args[2:], adherenceSvc, os.Stdin, out, errOut)
 	case "help", "-h", "--help":
@@ -109,6 +112,32 @@ func runJournal(args []string, svc *journalapp.Service, in io.Reader, out io.Wri
 		printJournalUsage(errOut)
 		return fmt.Errorf("unknown journal command: %s", args[0])
 	}
+}
+
+func runQuicknote(args []string, svc *journalapp.Service, in io.Reader, out io.Writer, errOut io.Writer) error {
+	reader := bufio.NewReader(in)
+	note, err := prompt(reader, out, "Quicknote: ")
+	if note == "" {
+		// TODO: Extract to const for error string
+		return errors.New("Unable to create quicknote without content.")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	date, err := parseDate("")
+	if err != nil {
+		return err
+	}
+
+	entry, err := svc.RecordEntry(context.Background(), date, map[journal.Precept]string{}, note, "")
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "journaled %s reflections=%d mood=%s\n", entry.Date.Format("2006-01-02"), len(entry.Reflections), entry.Mood)
+	return nil
 }
 
 func runJournalAdd(args []string, svc *journalapp.Service, out io.Writer, errOut io.Writer) error {
@@ -397,6 +426,7 @@ func printUsage(out io.Writer) {
 	fmt.Fprintln(out, "  mt journal guided")
 	fmt.Fprintln(out, "  mt journal latest")
 	fmt.Fprintln(out, "  mt journal list")
+	fmt.Fprintln(out, "  mt quicknote")
 	fmt.Fprintln(out, "  mt adherence guided")
 	fmt.Fprintln(out, "  mt version")
 }

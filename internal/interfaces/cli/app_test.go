@@ -581,3 +581,25 @@ func TestRunAdherenceGuidedConfirmNo(t *testing.T) {
 		t.Fatalf("expected ReverenceForLife to remain true")
 	}
 }
+
+func TestRunQuicknote(t *testing.T) {
+	repo := memory.NewJournalRepository()
+	svc := journalapp.NewService(repo)
+	today, _ := parseDate("")
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+
+	input := strings.NewReader(strings.Join([]string{
+		"note",
+	}, "\n"))
+
+	err := runQuicknote([]string{}, svc, input, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "journaled "+today.Format("2006-01-02")) {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+}
