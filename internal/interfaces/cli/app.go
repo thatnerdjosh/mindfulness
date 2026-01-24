@@ -127,12 +127,17 @@ func runQuicknote(args []string, svc *journalapp.Service, in io.Reader, out io.W
 		return err
 	}
 
+	foundation, err := promptFoundation(reader, out)
+	if err != nil {
+		return err
+	}
+
 	date, err := parseDate("")
 	if err != nil {
 		return err
 	}
 
-	entry, err := svc.RecordEntry(context.Background(), date, map[journal.Precept]string{}, note, "")
+	entry, err := svc.RecordEntry(context.Background(), date, map[journal.Precept]string{}, note, "", foundation)
 	if err != nil {
 		return err
 	}
@@ -169,7 +174,7 @@ func runJournalAdd(args []string, svc *journalapp.Service, out io.Writer, errOut
 		journal.NourishmentAndHealing:     *nourishment,
 	}
 
-	entry, err := svc.RecordEntry(context.Background(), date, reflections, *note, *mood)
+	entry, err := svc.RecordEntry(context.Background(), date, reflections, *note, *mood, journal.FoundationDhamma)
 	if err != nil {
 		return err
 	}
@@ -205,6 +210,11 @@ func runJournalGuided(args []string, svc *journalapp.Service, in io.Reader, out 
 		return err
 	}
 
+	foundation, err := promptFoundation(reader, out)
+	if err != nil {
+		return err
+	}
+
 	reflections := make(map[journal.Precept]string)
 	for _, info := range journal.AllPrecepts() {
 		question := fmt.Sprintf("%s reflection (optional): ", info.Title)
@@ -223,7 +233,7 @@ func runJournalGuided(args []string, svc *journalapp.Service, in io.Reader, out 
 	}
 
 	if !*noConfirm {
-		printGuidedSummary(out, date, mood, note, reflections)
+		printGuidedSummary(out, date, mood, note, reflections, foundation)
 		confirm, err := prompt(reader, out, "Save? (y/n): ")
 		if err != nil {
 			return err
@@ -234,7 +244,7 @@ func runJournalGuided(args []string, svc *journalapp.Service, in io.Reader, out 
 		}
 	}
 
-	entry, err := svc.RecordEntry(context.Background(), date, reflections, note, mood)
+	entry, err := svc.RecordEntry(context.Background(), date, reflections, note, mood, foundation)
 	if err != nil {
 		return err
 	}
@@ -345,7 +355,7 @@ func prompt(reader *bufio.Reader, out io.Writer, label string) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
-func printGuidedSummary(out io.Writer, date time.Time, mood string, note string, reflections map[journal.Precept]string) {
+func printGuidedSummary(out io.Writer, date time.Time, mood string, note string, reflections map[journal.Precept]string, foundation journal.Foundation) {
 	fmt.Fprintln(out, "Summary:")
 	fmt.Fprintf(out, "Date: %s\n", date.Format("2006-01-02"))
 	if strings.TrimSpace(mood) != "" {
@@ -354,10 +364,26 @@ func printGuidedSummary(out io.Writer, date time.Time, mood string, note string,
 	if strings.TrimSpace(note) != "" {
 		fmt.Fprintf(out, "Note: %s\n", strings.TrimSpace(note))
 	}
+	fmt.Fprintf(out, "Foundation: %s\n", journal.FoundationLabel(foundation))
 	for _, info := range journal.AllPrecepts() {
 		if reflection, ok := reflections[info.ID]; ok {
 			fmt.Fprintf(out, "%s: %s\n", info.Title, reflection)
 		}
+	}
+}
+
+func promptFoundation(reader *bufio.Reader, out io.Writer) (journal.Foundation, error) {
+	fmt.Fprintln(out, "Note: Dhamma is most important.")
+	for {
+		input, err := prompt(reader, out, "Foundation (k/v/c/d) [default d]: ")
+		if err != nil {
+			return "", err
+		}
+		foundation, err := journal.ParseFoundation(input)
+		if err == nil {
+			return foundation, nil
+		}
+		fmt.Fprintln(out, "Please enter k, v, c, or d.")
 	}
 }
 

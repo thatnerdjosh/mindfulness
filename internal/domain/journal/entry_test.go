@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewEntryValidatesDate(t *testing.T) {
-	_, err := NewEntry(time.Time{}, nil, "note", "calm")
+	_, err := NewEntry(time.Time{}, nil, "note", "calm", FoundationDhamma)
 	if !errors.Is(err, ErrInvalidDate) {
 		t.Fatalf("expected ErrInvalidDate, got %v", err)
 	}
@@ -16,14 +16,14 @@ func TestNewEntryValidatesDate(t *testing.T) {
 func TestNewEntryRejectsUnknownPrecept(t *testing.T) {
 	_, err := NewEntry(time.Now(), map[Precept]string{
 		Precept("unknown"): "reflection",
-	}, "", "")
+	}, "", "", FoundationDhamma)
 	if !errors.Is(err, ErrUnknownPrecept) {
 		t.Fatalf("expected ErrUnknownPrecept, got %v", err)
 	}
 }
 
 func TestNewEntryRequiresContent(t *testing.T) {
-	_, err := NewEntry(time.Now(), map[Precept]string{}, "  ", " ")
+	_, err := NewEntry(time.Now(), map[Precept]string{}, "  ", " ", FoundationDhamma)
 	if !errors.Is(err, ErrEmptyEntry) {
 		t.Fatalf("expected ErrEmptyEntry, got %v", err)
 	}
@@ -34,7 +34,7 @@ func TestNewEntryNormalizesFields(t *testing.T) {
 	entry, err := NewEntry(date, map[Precept]string{
 		ReverenceForLife: "  gratitude ",
 		TrueLove:         " ",
-	}, "  note ", " calm ")
+	}, "  note ", " calm ", FoundationKaya)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,6 +53,30 @@ func TestNewEntryNormalizesFields(t *testing.T) {
 	}
 	if entry.Reflections[ReverenceForLife] != "gratitude" {
 		t.Fatalf("expected trimmed reflection")
+	}
+	if entry.Foundation != FoundationKaya {
+		t.Fatalf("expected foundation to be set")
+	}
+}
+
+func TestNewEntryDefaultsFoundation(t *testing.T) {
+	entry, err := NewEntry(time.Now(), map[Precept]string{
+		ReverenceForLife: "steady",
+	}, "", "", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entry.Foundation != FoundationDhamma {
+		t.Fatalf("expected default foundation, got %q", entry.Foundation)
+	}
+}
+
+func TestNewEntryRejectsUnknownFoundation(t *testing.T) {
+	_, err := NewEntry(time.Now(), map[Precept]string{
+		ReverenceForLife: "steady",
+	}, "", "", Foundation("other"))
+	if !errors.Is(err, ErrUnknownFoundation) {
+		t.Fatalf("expected ErrUnknownFoundation, got %v", err)
 	}
 }
 

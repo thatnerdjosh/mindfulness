@@ -16,8 +16,8 @@ func NewService(repo journal.Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) RecordEntry(ctx context.Context, date time.Time, reflections map[journal.Precept]string, note string, mood string) (journal.Entry, error) {
-	entry, err := journal.NewEntry(date, reflections, note, mood)
+func (s *Service) RecordEntry(ctx context.Context, date time.Time, reflections map[journal.Precept]string, note string, mood string, foundation journal.Foundation) (journal.Entry, error) {
+	entry, err := journal.NewEntry(date, reflections, note, mood, foundation)
 	if err != nil {
 		return journal.Entry{}, err
 	}

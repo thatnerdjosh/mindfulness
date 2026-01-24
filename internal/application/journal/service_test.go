@@ -49,7 +49,7 @@ func TestRecordEntrySavesNormalizedEntry(t *testing.T) {
 	date := time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC)
 	entry, err := svc.RecordEntry(context.Background(), date, map[journal.Precept]string{
 		journal.ReverenceForLife: " clarity ",
-	}, " note ", " calm ")
+	}, " note ", " calm ", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestRecordEntryPropagatesErrors(t *testing.T) {
 
 	_, err := svc.RecordEntry(context.Background(), time.Now(), map[journal.Precept]string{
 		journal.ReverenceForLife: "note",
-	}, "", "")
+	}, "", "", journal.FoundationDhamma)
 	if !errors.Is(err, expected) {
 		t.Fatalf("expected error to propagate, got %v", err)
 	}
@@ -82,7 +82,7 @@ func TestRecordEntryValidatesEntry(t *testing.T) {
 	repo := &fakeRepo{}
 	svc := NewService(repo)
 
-	_, err := svc.RecordEntry(context.Background(), time.Now(), map[journal.Precept]string{}, " ", " ")
+	_, err := svc.RecordEntry(context.Background(), time.Now(), map[journal.Precept]string{}, " ", " ", journal.FoundationDhamma)
 	if !errors.Is(err, journal.ErrEmptyEntry) {
 		t.Fatalf("expected ErrEmptyEntry, got %v", err)
 	}
@@ -94,7 +94,7 @@ func TestLatestAndListDelegateToRepo(t *testing.T) {
 
 	entry, err := journal.NewEntry(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueHappiness: "share",
-	}, "", "")
+	}, "", "", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

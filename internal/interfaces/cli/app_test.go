@@ -387,6 +387,7 @@ func TestRunJournalGuided(t *testing.T) {
 				"2024-01-02",
 				"calm",
 				"steady note",
+				"d",
 				"reverence reflection",
 				"happiness reflection",
 				"",
@@ -411,6 +412,7 @@ func TestRunJournalGuided(t *testing.T) {
 				"2024-01-03",
 				"reflective",
 				"note",
+				"",
 				"",
 				"",
 				"",
@@ -441,6 +443,7 @@ func TestRunJournalGuided(t *testing.T) {
 				"",
 				"",
 				"",
+				"",
 			},
 			wantErr: journal.ErrEmptyEntry,
 		},
@@ -451,6 +454,7 @@ func TestRunJournalGuided(t *testing.T) {
 				"2024-01-05",
 				"grounded",
 				"note",
+				"c",
 				"",
 				"reflection",
 				"",
@@ -520,6 +524,7 @@ func TestRunJournalRoutes(t *testing.T) {
 				"2024-01-06",
 				"",
 				"note",
+				"",
 				"",
 				"",
 				"",
@@ -725,7 +730,7 @@ func TestRunQuicknote(t *testing.T) {
 	}{
 		{
 			name:            "adds note",
-			input:           []string{"note"},
+			input:           []string{"note", ""},
 			wantOutContains: "journaled",
 		},
 	}

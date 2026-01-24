@@ -19,9 +19,10 @@ type Entry struct {
 	Reflections map[Precept]string
 	Note        string
 	Mood        string
+	Foundation  Foundation
 }
 
-func NewEntry(date time.Time, reflections map[Precept]string, note string, mood string) (Entry, error) {
+func NewEntry(date time.Time, reflections map[Precept]string, note string, mood string, foundation Foundation) (Entry, error) {
 	if date.IsZero() {
 		return Entry{}, ErrInvalidDate
 	}
@@ -43,11 +44,19 @@ func NewEntry(date time.Time, reflections map[Precept]string, note string, mood 
 		return Entry{}, ErrEmptyEntry
 	}
 
+	if foundation == "" {
+		foundation = FoundationDhamma
+	}
+	if !IsKnownFoundation(foundation) {
+		return Entry{}, ErrUnknownFoundation
+	}
+
 	return Entry{
 		Date:        normalizeDate(date),
 		Reflections: cleaned,
 		Note:        note,
 		Mood:        mood,
+		Foundation:  foundation,
 	}, nil
 }
 

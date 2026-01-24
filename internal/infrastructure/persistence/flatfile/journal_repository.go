@@ -148,6 +148,7 @@ type entryRecord struct {
 	Reflections map[string]string `json:"reflections,omitempty"`
 	Note        string            `json:"note,omitempty"`
 	Mood        string            `json:"mood,omitempty"`
+	Foundation  string            `json:"foundation,omitempty"`
 }
 
 func recordFromEntry(entry journal.Entry) entryRecord {
@@ -160,6 +161,7 @@ func recordFromEntry(entry journal.Entry) entryRecord {
 		Reflections: reflections,
 		Note:        entry.Note,
 		Mood:        entry.Mood,
+		Foundation:  string(entry.Foundation),
 	}
 }
 
@@ -174,7 +176,7 @@ func (r entryRecord) toEntry() (journal.Entry, error) {
 		reflections[journal.Precept(precept)] = reflection
 	}
 
-	entry, err := journal.NewEntry(parsed, reflections, r.Note, r.Mood)
+	entry, err := journal.NewEntry(parsed, reflections, r.Note, r.Mood, journal.Foundation(strings.ToLower(strings.TrimSpace(r.Foundation))))
 	if err != nil {
 		return journal.Entry{}, fmt.Errorf("invalid journal entry for %s: %w", r.Date, err)
 	}

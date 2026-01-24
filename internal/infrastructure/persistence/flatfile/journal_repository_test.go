@@ -21,7 +21,7 @@ func TestJournalRepositoryPersistsEntries(t *testing.T) {
 
 	entryOne, err := journal.NewEntry(time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueLove: "kindness",
-	}, "note", "calm")
+	}, "note", "calm", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,13 +58,13 @@ func TestJournalRepositoryLatest(t *testing.T) {
 
 	entryOne, err := journal.NewEntry(time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueLove: "kindness",
-	}, "", "")
+	}, "", "", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	entryTwo, err := journal.NewEntry(time.Date(2024, 2, 3, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueHappiness: "share",
-	}, "", "")
+	}, "", "", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -96,13 +96,13 @@ func TestJournalRepositoryMultipleEntriesSameDate(t *testing.T) {
 
 	entryOne, err := journal.NewEntry(time.Date(2024, 2, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueLove: "kindness",
-	}, "first", "")
+	}, "first", "", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	entryTwo, err := journal.NewEntry(time.Date(2024, 2, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueHappiness: "share",
-	}, "second", "")
+	}, "second", "", journal.FoundationDhamma)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
