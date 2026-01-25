@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewEntryValidatesDate(t *testing.T) {
-	_, err := NewEntry(time.Time{}, nil, "note", "calm", FoundationDhamma)
+	_, err := NewEntry(time.Time{}, nil, "note", "calm", FoundationDhamma, time.Now())
 	if !errors.Is(err, ErrInvalidDate) {
 		t.Fatalf("expected ErrInvalidDate, got %v", err)
 	}
@@ -16,14 +16,14 @@ func TestNewEntryValidatesDate(t *testing.T) {
 func TestNewEntryRejectsUnknownPrecept(t *testing.T) {
 	_, err := NewEntry(time.Now(), map[Precept]string{
 		Precept("unknown"): "reflection",
-	}, "", "", FoundationDhamma)
+	}, "", "", FoundationDhamma, time.Now())
 	if !errors.Is(err, ErrUnknownPrecept) {
 		t.Fatalf("expected ErrUnknownPrecept, got %v", err)
 	}
 }
 
 func TestNewEntryRequiresContent(t *testing.T) {
-	_, err := NewEntry(time.Now(), map[Precept]string{}, "  ", " ", FoundationDhamma)
+	_, err := NewEntry(time.Now(), map[Precept]string{}, "  ", " ", FoundationDhamma, time.Now())
 	if !errors.Is(err, ErrEmptyEntry) {
 		t.Fatalf("expected ErrEmptyEntry, got %v", err)
 	}
@@ -34,7 +34,7 @@ func TestNewEntryNormalizesFields(t *testing.T) {
 	entry, err := NewEntry(date, map[Precept]string{
 		ReverenceForLife: "  gratitude ",
 		TrueLove:         " ",
-	}, "  note ", " calm ", FoundationKaya)
+	}, "  note ", " calm ", FoundationKaya, time.Date(2024, 1, 2, 12, 30, 0, 0, time.FixedZone("local", -5*60*60)))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestNewEntryNormalizesFields(t *testing.T) {
 func TestNewEntryDefaultsFoundation(t *testing.T) {
 	entry, err := NewEntry(time.Now(), map[Precept]string{
 		ReverenceForLife: "steady",
-	}, "", "", "")
+	}, "", "", "", time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -74,9 +74,22 @@ func TestNewEntryDefaultsFoundation(t *testing.T) {
 func TestNewEntryRejectsUnknownFoundation(t *testing.T) {
 	_, err := NewEntry(time.Now(), map[Precept]string{
 		ReverenceForLife: "steady",
-	}, "", "", Foundation("other"))
+	}, "", "", Foundation("other"), time.Now())
 	if !errors.Is(err, ErrUnknownFoundation) {
 		t.Fatalf("expected ErrUnknownFoundation, got %v", err)
+	}
+}
+
+func TestNewEntryDefaultsTimestamp(t *testing.T) {
+	date := time.Date(2024, 3, 10, 12, 0, 0, 0, time.FixedZone("local", -5*60*60))
+	entry, err := NewEntry(date, map[Precept]string{
+		ReverenceForLife: "steady",
+	}, "", "", FoundationDhamma, time.Time{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if entry.Timestamp.Format(time.RFC3339) != "2024-03-10T00:00:00Z" {
+		t.Fatalf("unexpected timestamp: %s", entry.Timestamp.Format(time.RFC3339))
 	}
 }
 

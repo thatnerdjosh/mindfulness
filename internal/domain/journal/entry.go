@@ -16,13 +16,14 @@ var (
 // Entry captures a daily mindfulness reflection.
 type Entry struct {
 	Date        time.Time
+	Timestamp   time.Time
 	Reflections map[Precept]string
 	Note        string
 	Mood        string
 	Foundation  Foundation
 }
 
-func NewEntry(date time.Time, reflections map[Precept]string, note string, mood string, foundation Foundation) (Entry, error) {
+func NewEntry(date time.Time, reflections map[Precept]string, note string, mood string, foundation Foundation, timestamp time.Time) (Entry, error) {
 	if date.IsZero() {
 		return Entry{}, ErrInvalidDate
 	}
@@ -51,8 +52,13 @@ func NewEntry(date time.Time, reflections map[Precept]string, note string, mood 
 		return Entry{}, ErrUnknownFoundation
 	}
 
+	if timestamp.IsZero() {
+		timestamp = normalizeDate(date)
+	}
+
 	return Entry{
 		Date:        normalizeDate(date),
+		Timestamp:   timestamp,
 		Reflections: cleaned,
 		Note:        note,
 		Mood:        mood,

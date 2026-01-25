@@ -94,7 +94,7 @@ func TestLatestAndListDelegateToRepo(t *testing.T) {
 
 	entry, err := journal.NewEntry(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC), map[journal.Precept]string{
 		journal.TrueHappiness: "share",
-	}, "", "", journal.FoundationDhamma)
+	}, "", "", journal.FoundationDhamma, time.Date(2024, 1, 2, 9, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

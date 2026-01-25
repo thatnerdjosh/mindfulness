@@ -10,14 +10,18 @@ import (
 // Service coordinates journaling use cases.
 type Service struct {
 	repo journal.Repository
+	now  func() time.Time
 }
 
 func NewService(repo journal.Repository) *Service {
-	return &Service{repo: repo}
+	return &Service{
+		repo: repo,
+		now:  time.Now,
+	}
 }
 
 func (s *Service) RecordEntry(ctx context.Context, date time.Time, reflections map[journal.Precept]string, note string, mood string, foundation journal.Foundation) (journal.Entry, error) {
-	entry, err := journal.NewEntry(date, reflections, note, mood, foundation)
+	entry, err := journal.NewEntry(date, reflections, note, mood, foundation, s.now())
 	if err != nil {
 		return journal.Entry{}, err
 	}

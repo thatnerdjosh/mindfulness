@@ -145,6 +145,7 @@ func (r *JournalRepository) persistLocked() error {
 
 type entryRecord struct {
 	Date        string            `json:"date"`
+	Timestamp   string            `json:"timestamp,omitempty"`
 	Reflections map[string]string `json:"reflections,omitempty"`
 	Note        string            `json:"note,omitempty"`
 	Mood        string            `json:"mood,omitempty"`
@@ -158,6 +159,7 @@ func recordFromEntry(entry journal.Entry) entryRecord {
 	}
 	return entryRecord{
 		Date:        entry.Date.UTC().Format("2006-01-02"),
+		Timestamp:   entry.Timestamp.Format(time.RFC3339),
 		Reflections: reflections,
 		Note:        entry.Note,
 		Mood:        entry.Mood,
@@ -171,12 +173,23 @@ func (r entryRecord) toEntry() (journal.Entry, error) {
 		return journal.Entry{}, fmt.Errorf("invalid journal date %q: %w", r.Date, err)
 	}
 
+	var timestamp time.Time
+	if strings.TrimSpace(r.Timestamp) == "" {
+		timestamp = parsed.UTC()
+	} else {
+		parsedTimestamp, err := time.Parse(time.RFC3339, strings.TrimSpace(r.Timestamp))
+		if err != nil {
+			return journal.Entry{}, fmt.Errorf("invalid journal timestamp %q: %w", r.Timestamp, err)
+		}
+		timestamp = parsedTimestamp
+	}
+
 	reflections := make(map[journal.Precept]string, len(r.Reflections))
 	for precept, reflection := range r.Reflections {
 		reflections[journal.Precept(precept)] = reflection
 	}
 
-	entry, err := journal.NewEntry(parsed, reflections, r.Note, r.Mood, journal.Foundation(strings.ToLower(strings.TrimSpace(r.Foundation))))
+	entry, err := journal.NewEntry(parsed, reflections, r.Note, r.Mood, journal.Foundation(strings.ToLower(strings.TrimSpace(r.Foundation))), timestamp)
 	if err != nil {
 		return journal.Entry{}, fmt.Errorf("invalid journal entry for %s: %w", r.Date, err)
 	}
