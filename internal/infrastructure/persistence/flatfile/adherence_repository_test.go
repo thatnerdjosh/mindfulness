@@ -98,43 +98,70 @@ func TestAdherenceRepositoryAppendLog(t *testing.T) {
 	}
 }
 
-func TestNewAdherenceRepositoryRequiresPath(t *testing.T) {
-	if _, err := NewAdherenceRepository("", "log"); err == nil {
-		t.Fatalf("expected error")
-	}
-	if _, err := NewAdherenceRepository("path", " "); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestNewAdherenceRepositoryFailsOnInvalidJSON(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "adherence.json")
-	logPath := filepath.Join(dir, "adherence.log.jsonl")
-
-	if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if _, err := NewAdherenceRepository(path, logPath); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestNewAdherenceRepositoryFailsOnUnknownPrecept(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "adherence.json")
-	logPath := filepath.Join(dir, "adherence.log.jsonl")
-
-	data := []byte(`{
+func TestNewAdherenceRepository(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		logPath string
+		setup   func(t *testing.T, dir string) string
+		wantErr bool
+	}{
+		{
+			name:    "requires path",
+			path:    "",
+			logPath: "log",
+			wantErr: true,
+		},
+		{
+			name:    "requires log path",
+			path:    "path",
+			logPath: " ",
+			wantErr: true,
+		},
+		{
+			name: "fails on invalid JSON",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "adherence.json")
+				if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
+		{
+			name: "fails on unknown precept",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "adherence.json")
+				data := []byte(`{
   "unknown-precept": true
 }`)
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+				if err := os.WriteFile(path, data, 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
 	}
 
-	if _, err := NewAdherenceRepository(path, logPath); err == nil {
-		t.Fatalf("expected error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := tt.path
+			logPath := tt.logPath
+			if tt.setup != nil {
+				path = tt.setup(t, dir)
+				logPath = filepath.Join(dir, "adherence.log.jsonl")
+			}
+			_, err := NewAdherenceRepository(path, logPath)
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 

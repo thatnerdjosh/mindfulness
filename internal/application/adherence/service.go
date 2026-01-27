@@ -33,6 +33,19 @@ func (s *Service) Set(ctx context.Context, next adherence.Adherence, notes map[j
 		return err
 	}
 
+	updated, err := s.computeUpdatedAdherence(current, next)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.Save(ctx, updated); err != nil {
+		return err
+	}
+
+	return s.logChanges(ctx, current, updated, notes)
+}
+
+func (s *Service) computeUpdatedAdherence(current, next adherence.Adherence) (adherence.Adherence, error) {
 	updated := make(adherence.Adherence, len(current))
 	for precept, value := range current {
 		updated[precept] = value
@@ -40,15 +53,15 @@ func (s *Service) Set(ctx context.Context, next adherence.Adherence, notes map[j
 
 	for precept, value := range next {
 		if !journal.IsKnownPrecept(precept) {
-			return fmt.Errorf("unknown precept: %s", precept)
+			return nil, fmt.Errorf("unknown precept: %s", precept)
 		}
 		updated[precept] = value
 	}
 
-	if err := s.repo.Save(ctx, updated); err != nil {
-		return err
-	}
+	return updated, nil
+}
 
+func (s *Service) logChanges(ctx context.Context, current, updated adherence.Adherence, notes map[journal.Precept]string) error {
 	now := s.now().UTC()
 	for precept, from := range current {
 		to := updated[precept]
@@ -67,6 +80,5 @@ func (s *Service) Set(ctx context.Context, next adherence.Adherence, notes map[j
 			return err
 		}
 	}
-
 	return nil
 }

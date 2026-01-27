@@ -42,49 +42,80 @@ func (f *fakeRepo) List(_ context.Context) ([]journal.Entry, error) {
 	return append([]journal.Entry{}, f.entries...), nil
 }
 
-func TestRecordEntrySavesNormalizedEntry(t *testing.T) {
-	repo := &fakeRepo{}
-	svc := NewService(repo)
-
-	date := time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC)
-	entry, err := svc.RecordEntry(context.Background(), date, map[journal.Precept]string{
-		journal.ReverenceForLife: " clarity ",
-	}, " note ", " calm ", journal.FoundationDhamma)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestRecordEntry(t *testing.T) {
+	saveFailedErr := errors.New("save failed")
+	tests := []struct {
+		name        string
+		date        time.Time
+		reflections map[journal.Precept]string
+		note        string
+		mood        string
+		foundation  journal.Foundation
+		repoErr     error
+		wantErr     error
+		check       func(t *testing.T, entry *journal.Entry, repo *fakeRepo)
+	}{
+		{
+			name: "saves normalized entry",
+			date: time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC),
+			reflections: map[journal.Precept]string{
+				journal.ReverenceForLife: " clarity ",
+			},
+			note:       " note ",
+			mood:       " calm ",
+			foundation: journal.FoundationDhamma,
+			check: func(t *testing.T, entry *journal.Entry, repo *fakeRepo) {
+				if entry.Note != "note" {
+					t.Fatalf("expected trimmed note, got %q", entry.Note)
+				}
+				if repo.saved.Date.IsZero() {
+					t.Fatalf("expected entry saved")
+				}
+				if repo.saved.Reflections[journal.ReverenceForLife] != "clarity" {
+					t.Fatalf("expected trimmed reflection")
+				}
+			},
+		},
+		{
+			name: "propagates errors",
+			date: time.Now(),
+			reflections: map[journal.Precept]string{
+				journal.ReverenceForLife: "note",
+			},
+			foundation: journal.FoundationDhamma,
+			repoErr:   saveFailedErr,
+			wantErr:   saveFailedErr,
+		},
+		{
+			name: "validates entry",
+			date: time.Now(),
+			reflections: map[journal.Precept]string{},
+			note:        " ",
+			mood:        " ",
+			foundation:  journal.FoundationDhamma,
+			wantErr:     journal.ErrEmptyEntry,
+		},
 	}
 
-	if entry.Note != "note" {
-		t.Fatalf("expected trimmed note, got %q", entry.Note)
-	}
-	if repo.saved.Date.IsZero() {
-		t.Fatalf("expected entry saved")
-	}
-	if repo.saved.Reflections[journal.ReverenceForLife] != "clarity" {
-		t.Fatalf("expected trimmed reflection")
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &fakeRepo{err: tt.repoErr}
+			svc := NewService(repo)
 
-func TestRecordEntryPropagatesErrors(t *testing.T) {
-	expected := errors.New("save failed")
-	repo := &fakeRepo{err: expected}
-	svc := NewService(repo)
-
-	_, err := svc.RecordEntry(context.Background(), time.Now(), map[journal.Precept]string{
-		journal.ReverenceForLife: "note",
-	}, "", "", journal.FoundationDhamma)
-	if !errors.Is(err, expected) {
-		t.Fatalf("expected error to propagate, got %v", err)
-	}
-}
-
-func TestRecordEntryValidatesEntry(t *testing.T) {
-	repo := &fakeRepo{}
-	svc := NewService(repo)
-
-	_, err := svc.RecordEntry(context.Background(), time.Now(), map[journal.Precept]string{}, " ", " ", journal.FoundationDhamma)
-	if !errors.Is(err, journal.ErrEmptyEntry) {
-		t.Fatalf("expected ErrEmptyEntry, got %v", err)
+			entry, err := svc.RecordEntry(context.Background(), tt.date, tt.reflections, tt.note, tt.mood, tt.foundation)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected %v, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.check != nil {
+				tt.check(t, &entry, repo)
+			}
+		})
 	}
 }
 

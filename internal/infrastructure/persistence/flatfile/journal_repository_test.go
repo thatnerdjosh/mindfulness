@@ -182,67 +182,65 @@ func TestDefaultJournalPathUsesHomeFallback(t *testing.T) {
 	}
 }
 
-func TestNewJournalRepositoryRequiresPath(t *testing.T) {
-	if _, err := NewJournalRepository(" "); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestLoadIgnoresMissingFile(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "missing.json")
-
-	repo, err := NewJournalRepository(path)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if _, err := repo.List(context.Background()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if _, err := os.Stat(path); err == nil {
-		t.Fatalf("expected missing file")
-	}
-}
-
-func TestLoadIgnoresEmptyFile(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "journal.json")
-
-	if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	repo, err := NewJournalRepository(path)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if entries, err := repo.List(context.Background()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	} else if len(entries) != 0 {
-		t.Fatalf("expected no entries, got %d", len(entries))
-	}
-}
-
-func TestNewJournalRepositoryFailsOnInvalidJSON(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "journal.json")
-
-	if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if _, err := NewJournalRepository(path); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestNewJournalRepositoryFailsOnInvalidDate(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "journal.json")
-
-	data := []byte(`[
+func TestNewJournalRepository(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		setup   func(t *testing.T, dir string) string
+		wantErr bool
+		check   func(t *testing.T, repo *JournalRepository)
+	}{
+		{
+			name:    "requires path",
+			path:    " ",
+			wantErr: true,
+		},
+		{
+			name: "ignores missing file",
+			setup: func(t *testing.T, dir string) string {
+				return filepath.Join(dir, "missing.json")
+			},
+			check: func(t *testing.T, repo *JournalRepository) {
+				if _, err := repo.List(context.Background()); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "ignores empty file",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "journal.json")
+				if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			check: func(t *testing.T, repo *JournalRepository) {
+				entries, err := repo.List(context.Background())
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if len(entries) != 0 {
+					t.Fatalf("expected no entries, got %d", len(entries))
+				}
+			},
+		},
+		{
+			name: "fails on invalid JSON",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "journal.json")
+				if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
+		{
+			name: "fails on invalid date",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "journal.json")
+				data := []byte(`[
   {
     "date": "bad-date",
     "reflections": {
@@ -250,20 +248,18 @@ func TestNewJournalRepositoryFailsOnInvalidDate(t *testing.T) {
     }
   }
 ]`)
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if _, err := NewJournalRepository(path); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestNewJournalRepositoryFailsOnInvalidEntry(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "journal.json")
-
-	data := []byte(`[
+				if err := os.WriteFile(path, data, 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
+		{
+			name: "fails on invalid entry",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "journal.json")
+				data := []byte(`[
   {
     "date": "2024-02-01",
     "reflections": {
@@ -271,11 +267,55 @@ func TestNewJournalRepositoryFailsOnInvalidEntry(t *testing.T) {
     }
   }
 ]`)
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+				if err := os.WriteFile(path, data, 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
+		{
+			name: "fails on invalid timestamp",
+			setup: func(t *testing.T, dir string) string {
+				path := filepath.Join(dir, "journal.json")
+				data := []byte(`[
+  {
+    "date": "2024-02-01",
+    "timestamp": "bad-timestamp",
+    "reflections": {
+      "true-love": "note"
+    }
+  }
+]`)
+				if err := os.WriteFile(path, data, 0o600); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
 	}
 
-	if _, err := NewJournalRepository(path); err == nil {
-		t.Fatalf("expected error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := tt.path
+			if tt.setup != nil {
+				path = tt.setup(t, dir)
+			}
+			repo, err := NewJournalRepository(path)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.check != nil {
+				tt.check(t, repo)
+			}
+		})
 	}
 }

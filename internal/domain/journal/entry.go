@@ -28,28 +28,19 @@ func NewEntry(date time.Time, reflections map[Precept]string, note string, mood 
 		return Entry{}, ErrInvalidDate
 	}
 
-	cleaned := make(map[Precept]string)
-	for precept, reflection := range reflections {
-		if !IsKnownPrecept(precept) {
-			return Entry{}, ErrUnknownPrecept
-		}
-		reflection = strings.TrimSpace(reflection)
-		if reflection != "" {
-			cleaned[precept] = reflection
-		}
+	cleanedReflections, err := validateAndCleanReflections(reflections)
+	if err != nil {
+		return Entry{}, err
 	}
 
-	note = strings.TrimSpace(note)
-	mood = strings.TrimSpace(mood)
-	if len(cleaned) == 0 && note == "" {
+	note, mood = strings.TrimSpace(note), strings.TrimSpace(mood)
+	if len(cleanedReflections) == 0 && note == "" {
 		return Entry{}, ErrEmptyEntry
 	}
 
-	if foundation == "" {
-		foundation = FoundationDhamma
-	}
-	if !IsKnownFoundation(foundation) {
-		return Entry{}, ErrUnknownFoundation
+	foundation, err = validateFoundation(foundation)
+	if err != nil {
+		return Entry{}, err
 	}
 
 	if timestamp.IsZero() {
@@ -59,11 +50,35 @@ func NewEntry(date time.Time, reflections map[Precept]string, note string, mood 
 	return Entry{
 		Date:        normalizeDate(date),
 		Timestamp:   timestamp,
-		Reflections: cleaned,
+		Reflections: cleanedReflections,
 		Note:        note,
 		Mood:        mood,
 		Foundation:  foundation,
 	}, nil
+}
+
+func validateAndCleanReflections(reflections map[Precept]string) (map[Precept]string, error) {
+	cleaned := make(map[Precept]string)
+	for precept, reflection := range reflections {
+		if !IsKnownPrecept(precept) {
+			return nil, ErrUnknownPrecept
+		}
+		reflection = strings.TrimSpace(reflection)
+		if reflection != "" {
+			cleaned[precept] = reflection
+		}
+	}
+	return cleaned, nil
+}
+
+func validateFoundation(foundation Foundation) (Foundation, error) {
+	if foundation == "" {
+		return FoundationDhamma, nil
+	}
+	if !IsKnownFoundation(foundation) {
+		return "", ErrUnknownFoundation
+	}
+	return foundation, nil
 }
 
 func (e Entry) SortedPrecepts() []Precept {
